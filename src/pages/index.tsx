@@ -30,7 +30,7 @@ const schema = z.object({
     .optional(),
 });
 
-const resolver: Resolver<FormValues> = async values => {
+const resolver: Resolver<FormValues> = async (values) => {
   return { values, errors: "1" };
 };
 
@@ -46,7 +46,7 @@ const Home: NextPage = () => {
   const files = watch("files");
   React.useEffect(() => {
     console.log(files);
-    if (files.length) {
+    if (files?.length) {
       setIsUsingBatch(true);
     } else {
       setIsUsingBatch(false);
@@ -60,13 +60,13 @@ const Home: NextPage = () => {
     console.log("data", data);
     if (!isUsingBatch) {
       fetch(data.url)
-        .then(res => {
+        .then((res) => {
           return res.text();
         })
-        .then(html => {
+        .then((html) => {
           console.log(html);
         })
-        .catch(err => console.warn(err));
+        .catch((err) => console.warn(err));
     } else {
       console.log(data.files);
       for (let i = 0; i < files.length; i++) {
@@ -118,7 +118,7 @@ const Home: NextPage = () => {
               }`}
               {...register("url", {
                 required: {
-                  value: true,
+                  value: isUsingBatch ? false : true,
                   message: "URLs are required",
                 },
                 pattern: {
