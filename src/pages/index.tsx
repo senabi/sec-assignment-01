@@ -7,7 +7,13 @@ import { ErrorMessage } from "@hookform/error-message";
 import { MdUploadFile as UploadFileIcon } from "react-icons/md";
 import { MdCached as ProcessingIcon } from "react-icons/md";
 import { MdAddLink as LinkIcon } from "react-icons/md";
+import { BsMicrosoft as MicrosoftIcon } from "react-icons/bs";
+import {
+  FaFirefoxBrowser as FirefoxIcon,
+  FaChrome as ChromeIcon,
+} from "react-icons/fa";
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 type FormValues = {
   url: string;
@@ -15,22 +21,43 @@ type FormValues = {
 };
 
 const schema = z.object({
-  url: z.string(),
+  url: z
+    .string()
+    // .min(1, { message: "URL is required" })
+    .optional()
+    .refine(
+      url => {
+        if (url) {
+          return /[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/.test(
+            url
+          );
+        }
+        return true;
+      },
+      { message: "Invalid URL" }
+    ),
   files: z
     .any()
-    .refine((files: FileList) => {
-      // files
-      for (let i = 0; i < files.length; i++) {
-        if (!".txt".includes(files.item(i)!.type)) {
-          return false;
+    .optional()
+    .refine(
+      (files: FileList) => {
+        console.log("AAAAAAAAAAAAAAAAAAAAAAAAA");
+        for (let i = 0; i < files.length; i++) {
+          if (
+            !"text/plain".includes(files.item(i)!.type) ||
+            !files.item(i)!.name.includes(".txt")
+          ) {
+            return false;
+          }
         }
-      }
-      return true;
-    }, "Only plain text files are accepted")
-    .optional(),
+        return true;
+        // }, "Only plain text files are accepted")
+      },
+      { message: "Only plain text files are accepted" }
+    ),
 });
 
-const resolver: Resolver<FormValues> = async (values) => {
+const resolver: Resolver<FormValues> = async values => {
   return { values, errors: "1" };
 };
 
@@ -40,46 +67,32 @@ const Home: NextPage = () => {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
-  } = useForm<FormValues>();
-  const [isUsingBatch, setIsUsingBatch] = React.useState(false);
+    formState: { errors, isValid },
+  } = useForm<FormValues>({ resolver: zodResolver(schema), mode: "onChange" });
+  // } = useForm<FormValues>();
   const files = watch("files");
+  const url = watch("url");
+  const [disableSubmit, setDisableSubmit] = React.useState(true);
+
   React.useEffect(() => {
-    console.log(files);
-    if (files?.length) {
-      setIsUsingBatch(true);
-    } else {
-      setIsUsingBatch(false);
+    if (!files && !url) {
+      setDisableSubmit(true);
+      return;
     }
-  }, [files]);
-  // const { ref: refFiles } = register("files");
-  // console.log(typeof refFiles.);
-  // } = useForm({ resolver });
-  // const onSubmit: Resolver<{url: string, file: FileList}> = (data) =>
+    if (!files.length && !url) {
+      setDisableSubmit(true);
+      return;
+    }
+    if (url || files.length > 0) {
+      setDisableSubmit(false);
+      return;
+    }
+  }, [files, url]);
+
   const onSubmit = (data: FormValues) => {
-    console.log("data", data);
-    if (!isUsingBatch) {
-      fetch(data.url)
-        .then((res) => {
-          return res.text();
-        })
-        .then((html) => {
-          console.log(html);
-        })
-        .catch((err) => console.warn(err));
-    } else {
-      console.log(data.files);
-      for (let i = 0; i < files.length; i++) {
-        if (!".txt".includes(files.item(i)!.type)) {
-          console.log("Its not a text plain file");
-          return;
-          // return false;
-        }
-      }
-      console.log("its a text file");
-    }
+    console.log("data submitted", data);
   };
-  // console.log(watch("url")); // watch input value by passing the name of it
+
   return (
     <>
       <Head>
@@ -93,10 +106,9 @@ const Home: NextPage = () => {
           <p>Digital Certificates</p>
           <p>Trust Verifier</p>
         </h1>
-
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col lg:flex-row gap-4 w-full justify-center"
+          className="flex flex-col lg:flex-row gap-4 w-full justify-center self-start"
         >
           <div className="w-full relative">
             <span
@@ -110,23 +122,13 @@ const Home: NextPage = () => {
             </span>
             <input
               type="url"
-              disabled={isUsingBatch}
+              // disabled={isUsingBatch}
               placeholder="Type URL ..."
               className={`placeholder:italic placeholder:text-gray-500 rounded py-2 px-3 border text-gray-500 w-full focus:outline-none focus:ring-1 focus:border-sky-500 focus:ring-sky-500 pl-8 ${
                 errors.url &&
                 "focus:border-red-400 focus:ring-red-400 border-red-400"
               }`}
-              {...register("url", {
-                required: {
-                  value: isUsingBatch ? false : true,
-                  message: "URLs are required",
-                },
-                pattern: {
-                  value:
-                    /[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/,
-                  message: "Please enter a valid URL",
-                },
-              })}
+              {...register("url")}
             />
             <ErrorMessage
               errors={errors}
@@ -136,27 +138,45 @@ const Home: NextPage = () => {
               )}
             />
           </div>
-          {/* {errors.url && <span>{errors.url.message}</span>} */}
-          {/* <input type="file" disabled /> */}
           <div className="flex w-full lg:w-[40rem] items-start gap-4 justify-between">
             <label className="flex cursor-pointer w-full flex-col">
               <input
                 type="file"
                 className="file:hidden order-2 text-gray-400 max-w-[12rem] text-sm"
-                accept="text/plain, .md"
+                // accept="text/plain, .md"
+                accept="text/plain"
                 multiple
-                {...register("files", { required: false })}
+                {...register("files")}
               />
-              <div className="bg-gray-700 hover:bg-gray-600 font-semibold border border-gray-500 py-2 px-4 rounded  w-full flex items-center">
+              <div
+                className={`order-1 bg-gray-700 hover:bg-gray-600 font-semibold border  py-2 px-4 rounded w-full flex items-center ${
+                  errors.files ? "border-red-400" : "border-gray-500"
+                }`}
+              >
                 <i className="text-xl">
                   <UploadFileIcon />
                 </i>
                 <p className="px-4">Load Batch</p>
               </div>
+              <ErrorMessage
+                errors={errors}
+                name="files"
+                render={({ message }) => (
+                  <span className="order-3 text-sm text-red-400">
+                    {message}
+                  </span>
+                )}
+              />
             </label>
             <button
               type="submit"
-              className="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 border border-gray-500 rounded w-full flex items-center justify-start"
+              disabled={!isValid || disableSubmit}
+              className={`${
+                !isValid || disableSubmit
+                  ? "bg-gray-600 border-gray-800 text-gray-400"
+                  : "bg-gray-700 hover:bg-gray-600 border-gray-500"
+              } font-semibold py-2 px-4 border  rounded w-full flex items-center justify-start`}
+              // className={`bg-gray-700 hover:bg-gray-600 border-gray-500 font-semibold py-2 px-4 border rounded w-full flex items-center justify-start`}
             >
               <i className="text-xl">
                 <ProcessingIcon />
@@ -184,10 +204,66 @@ const Home: NextPage = () => {
             assumenda quidem laborum hic, provident beatae perferendis eius.
             Est, facilis.
           </div>
+          <div className="p-4 rounded bg-gray-600">
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
+            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
+            assumenda quidem laborum hic, provident beatae perferendis eius.
+            Est, facilis.
+          </div>
+          {/* <div className="p-4 rounded bg-gray-600">
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
+            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
+            assumenda quidem laborum hic, provident beatae perferendis eius.
+            Est, facilis.
+          </div>
+          <div className="p-4 rounded bg-gray-600">
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
+            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
+            assumenda quidem laborum hic, provident beatae perferendis eius.
+            Est, facilis.
+          </div>
+          <div className="p-4 rounded bg-gray-600">
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
+            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
+            assumenda quidem laborum hic, provident beatae perferendis eius.
+            Est, facilis.
+          </div> */}
         </div>
+        <TrustStoreInfo />
       </main>
     </>
   );
 };
+
+const TrustStoreInfo: React.FC = () => (
+  <div className="flex-1 w-full h-full flex items-end">
+    <div className="flex justify-between w-full pb-4">
+      <u>
+        <div className="flex items-center gap-1">
+          <i className="text-base">
+            <FirefoxIcon />
+          </i>
+          <p>Mozilla Trust Store</p>
+        </div>
+      </u>
+      <u>
+        <div className="flex items-center gap-1">
+          <i className="text-sm">
+            <MicrosoftIcon />
+          </i>
+          <p>Microsoft Trust Store</p>
+        </div>
+      </u>
+      <u>
+        <div className="flex items-center gap-1">
+          <i className="text-base">
+            <ChromeIcon />
+          </i>
+          <p>Google Trust Store</p>
+        </div>
+      </u>
+    </div>
+  </div>
+);
 
 export default Home;
