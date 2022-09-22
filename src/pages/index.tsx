@@ -62,7 +62,12 @@ const resolver: Resolver<FormValues> = async values => {
 };
 
 const Home: NextPage = () => {
-  // const hello = trpc.useQuery(["example.hello", { text: "from tRPC" }]);
+  const links = trpc.useQuery(["links.getAll"]);
+  const linksMutation = trpc.useMutation(["links.insertLink"], {
+    onSuccess: () => {
+      window.location.reload();
+    },
+  });
   const {
     register,
     handleSubmit,
@@ -91,6 +96,9 @@ const Home: NextPage = () => {
 
   const onSubmit = (data: FormValues) => {
     console.log("data submitted", data);
+    if (data.url) {
+      linksMutation.mutate({ url: data.url });
+    }
   };
 
   return (
@@ -122,7 +130,6 @@ const Home: NextPage = () => {
             </span>
             <input
               type="url"
-              // disabled={isUsingBatch}
               placeholder="Type URL ..."
               className={`placeholder:italic placeholder:text-gray-500 rounded py-2 px-3 border text-gray-500 w-full focus:outline-none focus:ring-1 focus:border-sky-500 focus:ring-sky-500 pl-8 ${
                 errors.url &&
@@ -176,7 +183,6 @@ const Home: NextPage = () => {
                   ? "bg-gray-600 border-gray-800 text-gray-400"
                   : "bg-gray-700 hover:bg-gray-600 border-gray-500"
               } font-semibold py-2 px-4 border  rounded w-full flex items-center justify-start`}
-              // className={`bg-gray-700 hover:bg-gray-600 border-gray-500 font-semibold py-2 px-4 border rounded w-full flex items-center justify-start`}
             >
               <i className="text-xl">
                 <ProcessingIcon />
@@ -186,48 +192,11 @@ const Home: NextPage = () => {
           </div>
         </form>
         <div className="flex flex-col gap-4">
-          <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div>
-          <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div>
-          <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div>
-          <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div>
-          {/* <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div>
-          <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div>
-          <div className="p-4 rounded bg-gray-600">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae ut
-            nisi in, sint aliquam ipsa placeat totam itaque ipsam, maiores
-            assumenda quidem laborum hic, provident beatae perferendis eius.
-            Est, facilis.
-          </div> */}
+          {links.data?.map(link => (
+            <div key={link.id} className="p-4 rounded bg-gray-600">
+              <p>{link.url}</p>
+            </div>
+          ))}
         </div>
         <TrustStoreInfo />
       </main>
