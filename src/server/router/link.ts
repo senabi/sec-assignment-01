@@ -18,4 +18,9 @@ export const linkRouter = createRouter()
         },
       });
     },
+  })
+  .mutation("deleteAll", {
+    async resolve({ ctx }) {
+      return await ctx.prisma.link.deleteMany();
+    },
   });

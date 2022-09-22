@@ -11,6 +11,7 @@ import { BsMicrosoft as MicrosoftIcon } from "react-icons/bs";
 import {
   FaFirefoxBrowser as FirefoxIcon,
   FaChrome as ChromeIcon,
+  FaCircleNotch as CircleIcon,
 } from "react-icons/fa";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,6 +65,11 @@ const resolver: Resolver<FormValues> = async values => {
 const Home: NextPage = () => {
   const links = trpc.useQuery(["links.getAll"]);
   const linksMutation = trpc.useMutation(["links.insertLink"], {
+    onSuccess: () => {
+      window.location.reload();
+    },
+  });
+  const clearMutation = trpc.useMutation(["links.deleteAll"], {
     onSuccess: () => {
       window.location.reload();
     },
@@ -191,13 +197,71 @@ const Home: NextPage = () => {
             </button>
           </div>
         </form>
-        <div className="flex flex-col gap-4">
+        {links.data && links.data.length > 0 && (
+          <div className="flex w-full justify-between p-4">
+            <p className="w-28"></p>
+            <p className="text-center">Microsoft Edge</p>
+            <p className="text-center">Google Chrome</p>
+            <p className="text-center">Mozilla Firefox</p>
+          </div>
+        )}
+        <div className="flex flex-col gap-4 w-full">
           {links.data?.map(link => (
-            <div key={link.id} className="p-4 rounded bg-gray-600">
-              <p>{link.url}</p>
+            <div
+              key={link.id}
+              className="p-4 rounded bg-gray-600 flex justify-between w-full items-center"
+            >
+              <p className="w-80 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                {link.url}
+              </p>
+              <div className="flex justify-between w-full flex-1">
+                <div className="flex w-full justify-center items-center">
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                </div>
+                <div className="flex w-full justify-center items-center">
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                </div>
+                <div className="flex w-full justify-center items-center">
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-3xl px-2">
+                    <CircleIcon />
+                  </i>
+                </div>
+              </div>
             </div>
           ))}
         </div>
+        {links.data && links.data.length > 0 && (
+          <button
+            className={`bg-gray-700 hover:bg-gray-600 border-gray-500 font-semibold py-2 px-4 border  rounded`}
+            onClick={() => {
+              clearMutation.mutate();
+            }}
+          >
+            Clear All
+          </button>
+        )}
         <TrustStoreInfo />
       </main>
     </>
