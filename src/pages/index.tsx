@@ -12,6 +12,7 @@ import {
   FaFirefoxBrowser as FirefoxIcon,
   FaChrome as ChromeIcon,
   FaCircleNotch as CircleIcon,
+  FaEdge as EdgeIcon,
 } from "react-icons/fa";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -198,11 +199,16 @@ const Home: NextPage = () => {
           </div>
         </form>
         {links.data && links.data.length > 0 && (
-          <div className="flex w-full justify-between p-4">
-            <p className="w-28"></p>
-            <p className="text-center">Microsoft Edge</p>
-            <p className="text-center">Google Chrome</p>
-            <p className="text-center">Mozilla Firefox</p>
+          <div className="flex w-full pl-[21rem] pr-4 font-bold">
+            <div className="flex w-full justify-center">
+              <p>Microsoft Edge</p>
+            </div>
+            <div className="flex w-full justify-center">
+              <p>Google Chrome</p>
+            </div>
+            <div className="flex w-full justify-center">
+              <p>Mozilla Firefox</p>
+            </div>
           </div>
         )}
         <div className="flex flex-col gap-4 w-full">
@@ -216,35 +222,35 @@ const Home: NextPage = () => {
               </p>
               <div className="flex justify-between w-full flex-1">
                 <div className="flex w-full justify-center items-center">
-                  <i className="text-3xl px-2">
+                  <i className="text-4xl px-2 text-green-400">
                     <CircleIcon />
                   </i>
-                  <i className="text-3xl px-2">
+                  <i className="text-4xl px-2">
                     <CircleIcon />
                   </i>
-                  <i className="text-3xl px-2">
-                    <CircleIcon />
-                  </i>
-                </div>
-                <div className="flex w-full justify-center items-center">
-                  <i className="text-3xl px-2">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-3xl px-2">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-3xl px-2">
+                  <i className="text-4xl px-2">
                     <CircleIcon />
                   </i>
                 </div>
                 <div className="flex w-full justify-center items-center">
-                  <i className="text-3xl px-2">
+                  <i className="text-4xl px-2 text-green-400">
                     <CircleIcon />
                   </i>
-                  <i className="text-3xl px-2">
+                  <i className="text-4xl px-2">
                     <CircleIcon />
                   </i>
-                  <i className="text-3xl px-2">
+                  <i className="text-4xl px-2">
+                    <CircleIcon />
+                  </i>
+                </div>
+                <div className="flex w-full justify-center items-center">
+                  <i className="text-4xl px-2 text-green-400">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-4xl px-2">
+                    <CircleIcon />
+                  </i>
+                  <i className="text-4xl px-2">
                     <CircleIcon />
                   </i>
                 </div>
