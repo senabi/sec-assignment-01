@@ -5,3 +5,22 @@
 body {
   @apply text-gray-100 bg-gray-800;
 }
+
+.tippy-box[data-theme~="error"] {
+  @apply bg-red-400;
+}
+
+.tippy-box[data-theme~="error"][data-placement^="top"] > .tippy-arrow::before {
+  @apply border-t-red-400;
+}
+.tippy-box[data-theme~="error"][data-placement^="bottom"]
+  > .tippy-arrow::before {
+  @apply border-b-red-400;
+}
+.tippy-box[data-theme~="error"][data-placement^="left"] > .tippy-arrow::before {
+  @apply border-l-red-400;
+}
+.tippy-box[data-theme~="error"][data-placement^="right"]
+  > .tippy-arrow::before {
+  @apply border-r-red-400;
+}

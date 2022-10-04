@@ -1,9 +1,9 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import React, { useEffect } from "react";
+import React from "react";
 import { trpc } from "../utils/trpc";
-import { useForm, Resolver } from "react-hook-form";
-import { ErrorMessage } from "@hookform/error-message";
+import { useForm, FieldErrorsImpl } from "react-hook-form";
+import useCollapse from "react-collapsed";
 import { MdUploadFile as UploadFileIcon } from "react-icons/md";
 import { MdCached as ProcessingIcon } from "react-icons/md";
 import { MdAddLink as LinkIcon } from "react-icons/md";
@@ -14,63 +14,51 @@ import {
   FaCircleNotch as CircleIcon,
   FaEdge as EdgeIcon,
 } from "react-icons/fa";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Tippy from "@tippyjs/react";
+import "tippy.js/dist/tippy.css";
 
-type FormValues = {
-  url: string;
-  files: FileList;
+import { UrlsType, urlsValidator } from "../shared/urls";
+import { Link } from "@prisma/client";
+import { getBreakpointValue } from "../utils/tailwind";
+
+type FormInputType = {
+  errors: FieldErrorsImpl<UrlsType>;
+  field: keyof UrlsType;
+  children: React.ReactElement;
+  placement: "top-start" | "right" | "top-end";
+};
+const FormInput: React.FC<FormInputType> = ({
+  errors,
+  field,
+  children,
+  placement,
+}) => {
+  const [errMsg, setErrMsg] = React.useState(errors[field]?.message);
+  React.useEffect(() => {
+    if (errors[field]?.message) {
+      setErrMsg(errors[field]?.message);
+    }
+  }, [errors[field]?.message]);
+  return (
+    <>
+      <Tippy
+        content={
+          <div className="min-w-[1rem] font-medium min-h-[1rem]">{errMsg}</div>
+        }
+        visible={errors[field] ? true : false}
+        placement={placement}
+        theme="error"
+        inertia
+      >
+        {children}
+      </Tippy>
+    </>
+  );
 };
 
-const schema = z.object({
-  url: z
-    .string()
-    // .min(1, { message: "URL is required" })
-    .optional()
-    .refine(
-      url => {
-        if (url) {
-          return /[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/.test(
-            url
-          );
-        }
-        return true;
-      },
-      { message: "Invalid URL" }
-    ),
-  files: z
-    .any()
-    .optional()
-    .refine(
-      (files: FileList) => {
-        console.log("AAAAAAAAAAAAAAAAAAAAAAAAA");
-        for (let i = 0; i < files.length; i++) {
-          if (
-            !"text/plain".includes(files.item(i)!.type) ||
-            !files.item(i)!.name.includes(".txt")
-          ) {
-            return false;
-          }
-        }
-        return true;
-        // }, "Only plain text files are accepted")
-      },
-      { message: "Only plain text files are accepted" }
-    ),
-});
-
-const resolver: Resolver<FormValues> = async values => {
-  return { values, errors: "1" };
-};
-
-const Home: NextPage = () => {
-  const links = trpc.useQuery(["links.getAll"]);
+const UrlsFormContent = () => {
   const linksMutation = trpc.useMutation(["links.insertLink"], {
-    onSuccess: () => {
-      window.location.reload();
-    },
-  });
-  const clearMutation = trpc.useMutation(["links.deleteAll"], {
     onSuccess: () => {
       window.location.reload();
     },
@@ -80,34 +68,204 @@ const Home: NextPage = () => {
     handleSubmit,
     watch,
     formState: { errors, isValid },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), mode: "onChange" });
-  // } = useForm<FormValues>();
-  const files = watch("files");
-  const url = watch("url");
-  const [disableSubmit, setDisableSubmit] = React.useState(true);
+  } = useForm<UrlsType>({
+    resolver: zodResolver(urlsValidator),
+    mode: "onChange",
+    defaultValues: {
+      url: null,
+      fileUrls: null,
+    },
+  });
 
-  React.useEffect(() => {
-    if (!files && !url) {
-      setDisableSubmit(true);
-      return;
-    }
-    if (!files.length && !url) {
-      setDisableSubmit(true);
-      return;
-    }
-    if (url || files.length > 0) {
-      setDisableSubmit(false);
-      return;
-    }
-  }, [files, url]);
-
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = (data: UrlsType) => {
     console.log("data submitted", data);
-    if (data.url) {
-      linksMutation.mutate({ url: data.url });
-    }
+    linksMutation.mutate(data);
   };
 
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col lg:flex-row gap-4 w-full justify-center self-start"
+    >
+      <FormInput errors={errors} field="url" placement="top-start">
+        <div className="w-full relative">
+          <span
+            className={`absolute inset-y-0 lg:top-3 left-0 flex lg:block items-center pl-2 text-gray-400`}
+          >
+            <i className="text-xl">
+              <LinkIcon />
+            </i>
+          </span>
+
+          <input
+            placeholder="Type URL ..."
+            className={`pl-8 outline-none border text-sm rounded-lg block w-full p-2.5 bg-gray-700 dark:border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500 ${
+              errors.url &&
+              "focus:border-red-400 focus:ring-red-400 border-red-400"
+            }`}
+            {...register("url")}
+          />
+        </div>
+      </FormInput>
+
+      <div className="flex w-full lg:w-[40rem] items-start gap-4 justify-between flex-col sm:flex-row">
+        <FormInput errors={errors} field="fileUrls" placement="top-end">
+          <label className="flex cursor-pointer w-full flex-col">
+            <input
+              type="file"
+              className="file:hidden order-2 text-gray-400 max-w-[12rem] text-sm w-full"
+              accept="text/plain"
+              {...register("fileUrls")}
+            />
+            <div
+              className={`order-1 bg-gray-700 hover:bg-gray-600 font-semibold border py-2 px-4 rounded-lg w-full flex items-center ${
+                errors.fileUrls ? "border-red-400" : "border-gray-500"
+              }`}
+            >
+              <i className="text-xl">
+                <UploadFileIcon />
+              </i>
+              <p className="px-4 whitespace-nowrap overflow-hidden overflow-ellipsis">
+                Batch
+              </p>
+            </div>
+          </label>
+        </FormInput>
+
+        <button
+          type="submit"
+          disabled={!isValid}
+          className={`${
+            !isValid
+              ? "bg-gray-600 border-gray-800 text-gray-400"
+              : "bg-gray-700 hover:bg-gray-600 border-gray-500"
+          } font-semibold py-2 px-4 border rounded-lg w-full flex items-center justify-start`}
+        >
+          <i className="text-xl">
+            <ProcessingIcon />
+          </i>
+          <p className="px-4 whitespace-nowrap overflow-hidden overflow-ellipsis">
+            Verify
+          </p>
+        </button>
+      </div>
+    </form>
+  );
+};
+
+type ScoreContentType = {
+  score: number;
+  vendor: "Microsoft Edge" | "Google Chrome" | "Mozilla Firefox";
+};
+const ScoreContent: React.FC<ScoreContentType> = ({ score, vendor }) => {
+  return (
+    <div className="flex justify-evenly items-center">
+      <div className="sm:hidden">
+        <p className="text-center">{vendor}</p>
+      </div>
+      <div className="flex text-4xl items-center justify-center">
+        <CircleIcon className={`px-2 ${score >= 1 && "text-green-400"} `} />
+        <CircleIcon className={`px-2 ${score >= 2 && "text-green-400"}`} />
+        <CircleIcon className={`px-2 ${score === 3 && "text-green-400"} `} />
+      </div>
+    </div>
+  );
+};
+
+const Labels = ({ labels }: { labels: string[] }) => (
+  <>
+    {labels.map(i => (
+      <div
+        key={i}
+        className="hidden sm:flex justify-center items-center font-bold"
+      >
+        <p className="overflow-hidden whitespace-nowrap text-ellipsis">{i}</p>
+      </div>
+    ))}
+  </>
+);
+
+const UrlItem: React.FC<{ link: Link }> = ({ link }) => {
+  const { getCollapseProps, getToggleProps, isExpanded } = useCollapse();
+  // const React
+  React.useEffect(() => {
+    console.log(getBreakpointValue("md"));
+  }, []);
+  return (
+    <>
+      {/* mobile */}
+      <button
+        {...getToggleProps()}
+        className="bg-gray-700 p-4 rounded-lg text-left select-none sm:hidden"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex">
+            <a className="truncate block text-sky-400" href={link.url}>
+              {link.url}
+            </a>
+          </div>
+          <div {...getCollapseProps()}>
+            <ScoreContent vendor="Microsoft Edge" score={1} />
+            <ScoreContent vendor="Google Chrome" score={0} />
+            <ScoreContent vendor="Mozilla Firefox" score={3} />
+          </div>
+        </div>
+      </button>
+
+      {/* else */}
+      <div className="bg-gray-700 p-4 rounded-lg hidden sm:block">
+        <div className="flex items-center h-full">
+          <a className="truncate block text-sky-400" href={link.url}>
+            {link.url}
+          </a>
+        </div>
+      </div>
+      <div className="bg-gray-600 p-4 rounded-lg hidden sm:block">
+        <ScoreContent score={1} vendor="Microsoft Edge" />
+      </div>
+      <div className="bg-gray-600 p-4 rounded-lg hidden sm:block">
+        <ScoreContent score={1} vendor="Google Chrome" />
+      </div>
+      <div className="bg-gray-600 p-4 rounded-lg hidden sm:block">
+        <ScoreContent score={3} vendor="Mozilla Firefox" />
+      </div>
+    </>
+  );
+};
+
+const GridContent: React.FC<{ links: Link[] }> = ({ links }) => {
+  return (
+    <div className="w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <Labels
+          labels={["URL", "Microsoft", "Google Chrome", "Mozilla Firefox"]}
+        />
+        {links.map(link => (
+          <div
+            key={link.id}
+            className="sm:col-span-4 grid-cols-1 grid sm:grid-cols-4 gap-4"
+          >
+            <UrlItem link={link} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Test = () => {
+  return null;
+};
+
+const Home: NextPage = () => {
+  const links = trpc.useQuery(["links.getAll"]);
+  // links.data
+
+  const clearMutation = trpc.useMutation(["links.deleteAll"], {
+    onSuccess: () => {
+      window.location.reload();
+    },
+  });
   return (
     <>
       <Head>
@@ -121,146 +279,12 @@ const Home: NextPage = () => {
           <p>Digital Certificates</p>
           <p>Trust Verifier</p>
         </h1>
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col lg:flex-row gap-4 w-full justify-center self-start"
-        >
-          <div className="w-full relative">
-            <span
-              className={`absolute inset-y-0 lg:top-3 ${
-                errors.url && "bottom-6 lg:bottom-0"
-              } left-0 flex lg:block items-center pl-2 text-gray-500`}
-            >
-              <i className="text-xl">
-                <LinkIcon />
-              </i>
-            </span>
-            <input
-              type="url"
-              placeholder="Type URL ..."
-              className={`placeholder:italic placeholder:text-gray-500 rounded py-2 px-3 border text-gray-500 w-full focus:outline-none focus:ring-1 focus:border-sky-500 focus:ring-sky-500 pl-8 ${
-                errors.url &&
-                "focus:border-red-400 focus:ring-red-400 border-red-400"
-              }`}
-              {...register("url")}
-            />
-            <ErrorMessage
-              errors={errors}
-              name="url"
-              render={({ message }) => (
-                <span className="text-sm text-red-400">{message}</span>
-              )}
-            />
-          </div>
-          <div className="flex w-full lg:w-[40rem] items-start gap-4 justify-between">
-            <label className="flex cursor-pointer w-full flex-col">
-              <input
-                type="file"
-                className="file:hidden order-2 text-gray-400 max-w-[12rem] text-sm"
-                // accept="text/plain, .md"
-                accept="text/plain"
-                multiple
-                {...register("files")}
-              />
-              <div
-                className={`order-1 bg-gray-700 hover:bg-gray-600 font-semibold border  py-2 px-4 rounded w-full flex items-center ${
-                  errors.files ? "border-red-400" : "border-gray-500"
-                }`}
-              >
-                <i className="text-xl">
-                  <UploadFileIcon />
-                </i>
-                <p className="px-4">Load Batch</p>
-              </div>
-              <ErrorMessage
-                errors={errors}
-                name="files"
-                render={({ message }) => (
-                  <span className="order-3 text-sm text-red-400">
-                    {message}
-                  </span>
-                )}
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={!isValid || disableSubmit}
-              className={`${
-                !isValid || disableSubmit
-                  ? "bg-gray-600 border-gray-800 text-gray-400"
-                  : "bg-gray-700 hover:bg-gray-600 border-gray-500"
-              } font-semibold py-2 px-4 border  rounded w-full flex items-center justify-start`}
-            >
-              <i className="text-xl">
-                <ProcessingIcon />
-              </i>
-              <p className="px-4">Verify URLs</p>
-            </button>
-          </div>
-        </form>
-        {links.data && links.data.length > 0 && (
-          <div className="flex w-full pl-[21rem] pr-4 font-bold">
-            <div className="flex w-full justify-center">
-              <p>Microsoft Edge</p>
-            </div>
-            <div className="flex w-full justify-center">
-              <p>Google Chrome</p>
-            </div>
-            <div className="flex w-full justify-center">
-              <p>Mozilla Firefox</p>
-            </div>
-          </div>
-        )}
-        <div className="flex flex-col gap-4 w-full">
-          {links.data?.map(link => (
-            <div
-              key={link.id}
-              className="p-4 rounded bg-gray-600 flex justify-between w-full items-center"
-            >
-              <p className="w-80 overflow-hidden overflow-ellipsis whitespace-nowrap">
-                {link.url}
-              </p>
-              <div className="flex justify-between w-full flex-1">
-                <div className="flex w-full justify-center items-center">
-                  <i className="text-4xl px-2 text-green-400">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-4xl px-2">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-4xl px-2">
-                    <CircleIcon />
-                  </i>
-                </div>
-                <div className="flex w-full justify-center items-center">
-                  <i className="text-4xl px-2 text-green-400">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-4xl px-2">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-4xl px-2">
-                    <CircleIcon />
-                  </i>
-                </div>
-                <div className="flex w-full justify-center items-center">
-                  <i className="text-4xl px-2 text-green-400">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-4xl px-2">
-                    <CircleIcon />
-                  </i>
-                  <i className="text-4xl px-2">
-                    <CircleIcon />
-                  </i>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <UrlsFormContent />
+        <Test />
+        {links.data && <GridContent links={links.data} />}
         {links.data && links.data.length > 0 && (
           <button
-            className={`bg-gray-700 hover:bg-gray-600 border-gray-500 font-semibold py-2 px-4 border  rounded`}
+            className={`bg-gray-700 hover:bg-gray-600 border-gray-500 font-semibold py-2 px-4 border rounded-lg`}
             onClick={() => {
               clearMutation.mutate();
             }}
@@ -274,30 +298,24 @@ const Home: NextPage = () => {
   );
 };
 
-const TrustStoreInfo: React.FC = () => (
-  <div className="flex-1 w-full h-full flex items-end">
-    <div className="flex justify-between w-full pb-4">
+const TrustStoreInfo = () => (
+  <div className="flex-1 w-full h-full flex items-end justify-center">
+    <div className="flex justify-center sm:justify-between w-full pb-4 flex-col sm:flex-row">
       <u>
         <div className="flex items-center gap-1">
-          <i className="text-base">
-            <FirefoxIcon />
-          </i>
+          <FirefoxIcon />
           <p>Mozilla Trust Store</p>
         </div>
       </u>
       <u>
         <div className="flex items-center gap-1">
-          <i className="text-sm">
-            <MicrosoftIcon />
-          </i>
+          <MicrosoftIcon />
           <p>Microsoft Trust Store</p>
         </div>
       </u>
       <u>
         <div className="flex items-center gap-1">
-          <i className="text-base">
-            <ChromeIcon />
-          </i>
+          <ChromeIcon />
           <p>Google Trust Store</p>
         </div>
       </u>
