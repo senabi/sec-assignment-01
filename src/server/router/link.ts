@@ -32,7 +32,7 @@ export const linkRouter = createRouter()
   .mutation("insertLink", {
     input: urlsValidator,
     async resolve({ input, ctx }) {
-      let res = new Array<Link>();
+      const res = new Array<Link>();
       if (typeof input.url === "string") {
         const resUrl = await testUrl(input.url);
         console.log("\n\n\n\n res", resUrl);

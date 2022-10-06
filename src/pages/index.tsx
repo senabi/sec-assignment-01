@@ -20,7 +20,6 @@ import "tippy.js/dist/tippy.css";
 
 import { UrlsType, urlsValidator } from "../shared/urls";
 import { Link } from "@prisma/client";
-import { getBreakpointValue } from "../utils/tailwind";
 
 type FormInputType = {
   errors: FieldErrorsImpl<UrlsType>;
@@ -66,7 +65,6 @@ const UrlsFormContent = () => {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isValid },
   } = useForm<UrlsType>({
     resolver: zodResolver(urlsValidator),
@@ -188,9 +186,6 @@ const Labels = ({ labels }: { labels: string[] }) => (
 const UrlItem: React.FC<{ link: Link }> = ({ link }) => {
   const { getCollapseProps, getToggleProps, isExpanded } = useCollapse();
   // const React
-  React.useEffect(() => {
-    console.log(getBreakpointValue("md"));
-  }, []);
   return (
     <>
       {/* mobile */}
